@@ -4,18 +4,17 @@ mod vga_buffer;
 
 use core::panic::PanicInfo;
 
-static HELLO: &[u8] = b"HELLO WORLD!";
-
 #[no_mangle] // Don't mangel this functions name
 pub extern "C" fn _start() -> ! {
     // Entry point of the kernel
-    vga_buffer::print_something();
+    println!("Hello world{}", "!");
 
     loop {}
 }
 
 // Called on panic.
 #[panic_handler]
-fn panic(_info: &PanicInfo) -> ! {
+fn panic(info: &PanicInfo) -> ! {
+    println!("{}", info);
     loop {}
 }
