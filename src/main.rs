@@ -12,12 +12,17 @@ entry_point!(kernel_main);
 
 #[no_mangle]
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
+    use rust_os::memory::BootInfoFrameAllocator;
     println!("Hello World{}", "!");
 
     rust_os::init();
+    
+    let mut frame_allocator = unsafe {
+        BootInfoFrameAllocator::init(&boot_info.memory_map)
+    };
 
     #[cfg(test)]
-    test_main();
+    test_main(); 
 
     rust_os::hlt_loop();
 }
