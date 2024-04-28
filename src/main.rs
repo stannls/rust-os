@@ -3,7 +3,9 @@
 #![feature(custom_test_frameworks)]
 #![test_runner(rust_os::test_runner)]
 #![reexport_test_harness_main = "test_main"]
+extern crate alloc;
 
+use alloc::boxed::Box;
 use core::panic::PanicInfo;
 use bootloader::{entry_point, BootInfo};
 use rust_os::println;
@@ -20,6 +22,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     let mut frame_allocator = unsafe {
         BootInfoFrameAllocator::init(&boot_info.memory_map)
     };
+    let x = Box::new(41);
 
     #[cfg(test)]
     test_main(); 
