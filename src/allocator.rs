@@ -1,13 +1,11 @@
 extern crate alloc;
-use alloc::alloc::{GlobalAlloc, Layout};
 use linked_list_allocator::LockedHeap;
 use x86_64::{structures::paging::{mapper::MapToError, FrameAllocator, Mapper, Page, PageTableFlags, Size4KiB}, VirtAddr};
-use core::ptr::null_mut;
 
 #[global_allocator]
 static ALLOCATOR: LockedHeap = LockedHeap::empty();
 
-pub const HEAP_START: usize = 0x_4444_4444_4444_0000;
+pub const HEAP_START: usize = 0x_0000_4444_4444_4444;
 pub const HEAP_SIZE: usize = 100 * 1024; // 100 KiB
 
 pub fn init_heap(mapper: &mut impl Mapper<Size4KiB>, frame_allocator: &mut impl FrameAllocator<Size4KiB>) -> Result<(),  MapToError<Size4KiB>> {
@@ -18,7 +16,6 @@ pub fn init_heap(mapper: &mut impl Mapper<Size4KiB>, frame_allocator: &mut impl 
         let heap_end_page = Page::containing_address(heap_end);
         Page::range_inclusive(heap_start_page, heap_end_page)
     };
-
     for page in page_range {
         let frame = frame_allocator
             .allocate_frame()
@@ -34,14 +31,3 @@ pub fn init_heap(mapper: &mut impl Mapper<Size4KiB>, frame_allocator: &mut impl 
     Ok(())
 }
 
-pub struct Dummy;
-
-unsafe impl GlobalAlloc for Dummy {
-    unsafe fn alloc(&self, _layout: Layout) -> *mut u8 {
-        null_mut()
-    }
-
-    unsafe fn dealloc(&self, _ptr: *mut u8, _layout: Layout) {
-        panic!("dealloc should be never called")
-    }
-}
