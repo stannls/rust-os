@@ -5,7 +5,6 @@
 #![reexport_test_harness_main = "test_main"]
 extern crate alloc;
 
-use alloc::boxed::Box;
 use core::panic::PanicInfo;
 use bootloader::{entry_point, BootInfo};
 use rust_os::println;
@@ -28,7 +27,6 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     };
     allocator::init_heap(&mut mapper, &mut frame_allocator)
         .expect("Heap initialisation failed.");
-    let x = Box::new(41);
 
     #[cfg(test)]
     test_main(); 
