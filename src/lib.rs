@@ -9,12 +9,15 @@ use core::panic::PanicInfo;
 #[cfg(test)]
 use bootloader::{BootInfo, entry_point};
 
+extern crate alloc;
+
 pub mod serial;
 pub mod vga_buffer;
 pub mod interupts;
 pub mod gdt;
 pub mod memory;
 pub mod allocator;
+pub mod task;
 
 pub fn init() {
     gdt::init();
