@@ -15,15 +15,12 @@
           rustToolchain = pkgs.rust-bin.nightly.latest.default.override {
             extensions = [ "rust-src" "rust-analyzer" ];
           };
-          # new! 👇
           nativeBuildInputs = with pkgs; [ rustToolchain pkg-config ];
-          # also new! 👇
-          buildInputs = with pkgs; [ openssl alsa-lib pkg-config ];
+          buildInputs = with pkgs; [ pkg-config ];
         in
         with pkgs;
         {
           devShells.default = mkShell {
-            # 👇 and now we can just inherit them
             inherit buildInputs nativeBuildInputs;
           };
         }
