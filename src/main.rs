@@ -16,7 +16,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     use rust_os::memory::{self, BootInfoFrameAllocator};
     use rust_os::allocator;
     use x86_64::VirtAddr;
-    println!("Hello World{}", "!");
+    println!("Initialising kernel...");
 
     rust_os::init();
     
@@ -29,9 +29,11 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
         .expect("Heap initialisation failed.");
     let mut executor = SimpleExecutor::new();
     executor.spawn(Task::new(keyboard::print_keypresses()));
-    executor.run();
 
-    print!("> ");
+    println!("Sucessfully initialised kernel...");
+    print!(">");
+
+    executor.run();
 
     #[cfg(test)]
     test_main(); 
