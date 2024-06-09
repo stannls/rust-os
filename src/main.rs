@@ -7,7 +7,7 @@ extern crate alloc;
 
 use core::panic::PanicInfo;
 use bootloader::{entry_point, BootInfo};
-use rust_os::println;
+use rust_os::{print, println};
 
 entry_point!(kernel_main);
 
@@ -27,6 +27,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     };
     allocator::init_heap(&mut mapper, &mut frame_allocator)
         .expect("Heap initialisation failed.");
+    print!("> ");
 
     #[cfg(test)]
     test_main(); 
