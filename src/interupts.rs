@@ -1,6 +1,6 @@
 use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame, PageFaultErrorCode};
 use pic8259::ChainedPics;
-use crate::{gdt, println, print,  hlt_loop};
+use crate::{gdt, println, hlt_loop};
 use lazy_static::lazy_static;
 
 pub const PIC_1_OFFSET: u8 = 32;
@@ -84,8 +84,6 @@ extern "x86-interrupt" fn page_fault_handler(
 extern "x86-interrupt" fn keyboard_interrupt_handler(
     _stack_frame: InterruptStackFrame)
 {
-    use pc_keyboard::{layouts, DecodedKey, HandleControl, Keyboard, ScancodeSet1};
-    use spin::Mutex;
     use x86_64::instructions::port::Port;
 
     let mut port = Port::new(0x60);
