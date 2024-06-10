@@ -13,7 +13,7 @@
             inherit system overlays;
           };
           rustToolchain = pkgs.rust-bin.nightly.latest.default.override {
-            extensions = [ "rust-src" "rust-analyzer" ];
+            extensions = [ "rust-src" "rust-analyzer" "llvm-tools-preview" ];
           };
           nativeBuildInputs = with pkgs; [ rustToolchain pkg-config ];
           buildInputs = with pkgs; [ pkg-config ];
