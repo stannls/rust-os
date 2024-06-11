@@ -7,7 +7,7 @@ extern crate alloc;
 
 use core::panic::PanicInfo;
 use bootloader::{entry_point, BootInfo};
-use rust_os::{print, println, task::{keyboard, simple_executor::SimpleExecutor, Task}};
+use rust_os::{drivers::ata::ATA1, print, println, task::{keyboard, simple_executor::SimpleExecutor, Task}};
 
 entry_point!(kernel_main);
 
@@ -29,6 +29,8 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
         .expect("Heap initialisation failed.");
     let mut executor = SimpleExecutor::new();
     executor.spawn(Task::new(keyboard::print_keypresses()));
+
+    let mut ata = ATA1.lock();
 
     println!("Sucessfully initialised kernel...");
     print!(">");
