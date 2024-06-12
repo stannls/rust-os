@@ -4,6 +4,7 @@ use x86_64::instructions::port::Port;
 
 lazy_static!{
     pub static ref ATA1: Mutex<AtaDevice> = Mutex::new( AtaDevice::from_address(0x1F0));
+    pub static ref ATA2: Mutex<AtaDevice> = Mutex::new(AtaDevice::from_address(0x170));
 }
 
 // Status constants
