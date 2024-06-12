@@ -24,6 +24,8 @@ lazy_static! {
             .set_handler_fn(timer_interrupt_handler);
         idt[InterruptIndex::Keyboard.as_usize()]
             .set_handler_fn(keyboard_interrupt_handler);
+        idt[(PIC_1_OFFSET + 14) as usize]
+            .set_handler_fn(ata_interrupt_handler);
         idt
     };
 }
@@ -94,6 +96,16 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
     unsafe {
         PICS.lock()
             .notify_end_of_interrupt(InterruptIndex::Keyboard.as_u8());
+    }
+}
+
+extern "x86-interrupt" fn ata_interrupt_handler(
+    _stack_frame: InterruptStackFrame)
+{
+    println!("ATA Interupt");
+    unsafe {
+        PICS.lock()
+            .notify_end_of_interrupt(PIC_1_OFFSET + 14);
     }
 }
 
