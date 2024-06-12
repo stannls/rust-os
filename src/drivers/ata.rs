@@ -6,9 +6,20 @@ lazy_static!{
     pub static ref ATA1: Mutex<AtaDevice> = Mutex::new( AtaDevice::from_address(0x1F0));
 }
 
+// Status constants
+const STATUS_BSY: u8 = 0x80;
+const STATUS_RDY: u8 = 0x40;
+const STATUS_DRQ: u8 = 0x08;
+const STATUS_DF: u8 = 0x20;
+const STATUS_ERR: u8 = 0x01;
+
+// Command constants
+const READ_COMMAND: u8 = 0x20;
+const WRITE_COMMAND: u8 = 0x30;
+
 #[allow(non_snake_case)]
 pub struct AtaDevice {
-    ATA_DATA: Port<u16>,
+    ATA_DATA: Port<u8>,
     ATA_ERROR: Port<u8>,
     ATA_SECTOR_COUNT: Port<u8>,
     ATA_SECTOR_NUMBER: Port<u8>,
@@ -33,99 +44,98 @@ impl AtaDevice {
         };
     }
 
-    #[allow(arithmetic_overflow)]
     pub fn write_sector(&mut self, sector_number: u32, sector_count: u8, data: &[u8]) -> Option<()>{
+        // Wait until controller is no longer busy
+        self.wait_busy();
+        
+        // Setup the controller to write the correct sector
         unsafe {
-            // Wait for drive to be ready
-            self.wait_busy();
-
-            // Set the sector count
+            self.ATA_DRIVE_HEAD.write(0xE0 | ((sector_number >> 24) as u8 & 0xF));
             self.ATA_SECTOR_COUNT.write(sector_count);
-
-            // Set the sector number
-            self.ATA_SECTOR_NUMBER.write((sector_number) as u8);
+            self.ATA_SECTOR_NUMBER.write(sector_number as u8);
             self.ATA_CYLINDER_LOW.write((sector_number >> 8) as u8);
             self.ATA_CYLINDER_HIGH.write((sector_number >> 16) as u8);
+            self.ATA_COMMAND.write(WRITE_COMMAND);
+        }
 
-            // Set the drive and head (assuming LBA28 addressing)
-            self.ATA_DRIVE_HEAD.write(0xA0 | (sector_number >> 24 & 0xF) as u8);
+        // Write each sector
+        for current_sector in 0..sector_count as usize {
+            self.wait_busy();
+            self.wait_drq();
 
-            // Send the write sectors command
-            self.ATA_COMMAND.write(0x30);
-
-            // Write the data into the ATA device
-            for current_sector in 0..sector_count as usize {
-                self.wait_busy();
-                for byte in 0..256 {
-                    if current_sector * 256 + byte < data.len() {
-                        self.ATA_DATA.write(data[current_sector * 256 + byte] as u16)
-                    } else {
+            // Write byte onto the disk if there is enough data. Else fill with zeroes.
+            for current_byte in 0..256 {
+                if data.len() >= current_sector * 256 + current_byte {
+                    unsafe {
+                        self.ATA_DATA.write(data[current_sector * 256 + current_byte])
+                    }
+                }
+                else {
+                    unsafe {
                         self.ATA_DATA.write(0);
                     }
                 }
             }
+        }
+        self.wait_busy();
 
-            self.wait_busy();
-
-            // Check for errors
-            return if self.ATA_ERROR.read() == 0 {
+        // Check for errors and report if an error has ocurred
+        return if unsafe {self.ATA_ERROR.read()} == 0 {
                 Some(())
             } else {
                 None
             }
-        } 
+
     }
 
-    #[allow(arithmetic_overflow)]
-    pub fn read_sectors(&mut self, sector_number: u8, sector_count: u8, buffer: &mut [u8]) -> Option<()> {
+    pub fn read_sectors(&mut self, sector_number: u32, sector_count: u8, buffer: &mut [u8]) -> Option<()> {
+        // Wait until controller is no longer busy
+        self.wait_busy();
+        
+        // Setup the controller to read the correct sector
         unsafe {
+            self.ATA_DRIVE_HEAD.write(0xE0 | ((sector_number >> 24) as u8 & 0xF));
+            self.ATA_SECTOR_COUNT.write(sector_count);
+            self.ATA_SECTOR_NUMBER.write(sector_number as u8);
+            self.ATA_CYLINDER_LOW.write((sector_number >> 8) as u8);
+            self.ATA_CYLINDER_HIGH.write((sector_number >> 16) as u8);
+            self.ATA_COMMAND.write(READ_COMMAND);
+        }
+        // Read each sector
+        for current_sector in 0..sector_count as usize {
             self.wait_busy();
+            self.wait_drq();
 
-            // Set the sector count
-            self.ATA_SECTOR_COUNT.write(sector_count);
-
-            // Set the sector number
-            self.ATA_SECTOR_NUMBER.write(sector_number);
-            self.ATA_CYLINDER_LOW.write(sector_number.wrapping_shr(8));
-            self.ATA_CYLINDER_HIGH.write(sector_number.wrapping_shr(16));
-
-            // Set the drive and head (assuming LBA28 addressing)
-            self.ATA_DRIVE_HEAD.write(0xA0 | (sector_number.wrapping_shr(24)));
-
-            // Set the sector count
-            self.ATA_SECTOR_COUNT.write(sector_count);
-
-            // Send the read sectors command
-            self.ATA_COMMAND.write(0x20);
-
-            // Read the data from the ATA data port
-            for current_sector in 0..sector_count as usize {
-                self.wait_busy();
-                for byte in 0..256 {
-                    if current_sector * 256 + byte < buffer.len() {
-                        buffer[current_sector * 256 + byte] = self.ATA_DATA.read() as u8;
-                    } else {
-                        break;
+            // Write each byte into the buffer if it has enough space
+            for current_byte in 0..256 {
+                if buffer.len() >= current_sector * 256 + current_byte {
+                    unsafe {
+                        buffer[current_sector * 256 + current_byte] = self.ATA_DATA.read()
                     }
                 }
             }
+        }
+        self.wait_busy();
 
-            self.wait_busy();
-
-            // Check for errors
-            return if self.ATA_ERROR.read() == 0 {
+        // Check for errors and report if an error has ocurred
+        return if unsafe {self.ATA_ERROR.read()} == 0 {
                 Some(())
             } else {
                 None
             }
 
+    }
+
+    fn wait_busy(&mut self) {
+        unsafe {
+            while self.ATA_COMMAND.read() & STATUS_BSY == 1 {}
         }
     }
 
-    // Wait until the controller is no longer busy
-    fn wait_busy(&mut self) {
+    fn wait_drq(&mut self) {
         unsafe {
-            while self.ATA_COMMAND.read() & 0x80 == 1 {}
+            while self.ATA_COMMAND.read() & STATUS_DRQ == 1 {}
         }
     }
+
 }
