@@ -16,7 +16,7 @@
             extensions = [ "rust-src" "rust-analyzer" "llvm-tools-preview" ];
           };
           nativeBuildInputs = with pkgs; [ rustToolchain pkg-config ];
-          buildInputs = with pkgs; [ pkg-config ];
+          buildInputs = with pkgs; [ pkg-config xorriso openssl ];
         in
         with pkgs;
         {
